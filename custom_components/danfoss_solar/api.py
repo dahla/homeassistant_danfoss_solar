@@ -51,7 +51,7 @@ class DanfossSolarAPI:
             # 2. Extract SID
             sid_match = SID_PATTERN.search(login_html)
             if not sid_match:
-                _LOGGER.error("Failed to extract SID. Check credentials or domain.")
+                _LOGGER.error("Failed to extract SID. Check credentials or domain. Response: %s", login_html)
                 return None
             
             sid = sid_match.group(1)
@@ -71,6 +71,15 @@ class DanfossSolarAPI:
             if p_match: data["power"] = self._parse_value(p_match.group(1), p_match.group(2))
             if d_match: data["daily_production"] = self._parse_value(d_match.group(1), d_match.group(2))
             if t_match: data["total_production"] = self._parse_value(t_match.group(1), t_match.group(2))
+
+            async with self._session.get(login_url, params=params, headers=self.headers, timeout=10) as resp:
+                login_html = await resp.text()
+
+            # 5. Logout Request
+            logout_url = f"http://{domain}/cgi-bin/logout.tcl"
+            async with self._session.get(logout_url, params={"sid": sid}, headers=self.headers, timeout=10) as resp:
+                logout_html = await resp.text()
+
 
             return data
 
