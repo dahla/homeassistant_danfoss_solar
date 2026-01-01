@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Danfoss Solar Inverter Setup",
+        "description": "Enter the connection details for your Danfoss Solar Inverter.",
+        "data": {
+          "name": "Display Name (e.g. My Solar)",
+          "domain": "Inverter IP or Domain",
+          "username": "Web UI Username",
+          "password": "Web UI Password",
+          "interval": "Update Interval (Seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to inverter",
+      "invalid_auth": "Invalid username or password",
+      "unknown": "Unexpected error"
+    }
+  }
+}

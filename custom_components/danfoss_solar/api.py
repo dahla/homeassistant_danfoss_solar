@@ -63,11 +63,16 @@ class DanfossSolarAPI:
 
             # 4. Extract Values
             data = {"power": 0, "daily_production": 0, "total_production": 0}
+            
+            _LOGGER.debug("Raw HTML received (first 500 chars): %s", overview_html[:500])
 
             p_match = POWER_PATTERN.search(overview_html)
             d_match = DAILY_PATTERN.search(overview_html)
             t_match = TOTAL_PATTERN.search(overview_html)
 
+            # Debugging the matches
+            _LOGGER.debug("Matches - Power: %s, Daily: %s, Total: %s", p_match, d_match, t_match)
+        
             if p_match: data["power"] = self._parse_value(p_match.group(1), p_match.group(2))
             if d_match: data["daily_production"] = self._parse_value(d_match.group(1), d_match.group(2))
             if t_match: data["total_production"] = self._parse_value(t_match.group(1), t_match.group(2))

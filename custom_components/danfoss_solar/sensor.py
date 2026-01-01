@@ -45,20 +45,28 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class DanfossSolarInverter(CoordinatorEntity, SensorEntity):
-    """Representation of a Danfoss Sensor."""
-
     def __init__(self, coordinator, entry, config, suffix, 
                  device_class, state_class, unit):
-        """Initialize the sensor."""
         super().__init__(coordinator)
         
         self._suffix = suffix
+        # Hardcoded mapping for pretty names
+        friendly_names = {
+            "power": "Current Power",
+            "daily_production": "Production Today",
+            "total_production": "Lifetime Production"
+        }
+        _LOGGER.debug("Initialization values - Suffix: %s, Device Class: %s, State Class: %s, Unit: %s",
+                      suffix, device_class, state_class, unit)
+        base_name = entry.data.get("name", "Danfoss")
+        pretty_suffix = friendly_names.get(suffix, suffix.replace("_", " ").title())
         
-        # Use entry.title or config.get("name") for the display name
-        base_name = config.get("name", "Danfoss Inverter")
-        self._attr_name = f"{base_name} {suffix.replace('_', ' ').title()}"
+        # This sets the name you see in the UI
+        self._attr_name = f"{base_name} {pretty_suffix}"
         
+        # Unique ID stays internal (do not change this or you get duplicate entities)
         self._attr_unique_id = f"{entry.entry_id}_{suffix.lower()}"
+        
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_unit_of_measurement = unit
@@ -67,6 +75,7 @@ class DanfossSolarInverter(CoordinatorEntity, SensorEntity):
             identifiers={(DOMAIN, entry.entry_id)},
             name=base_name,
             manufacturer="Danfoss Solar",
+            model="Solar Inverter Web Interface"
         )
 
     @property
