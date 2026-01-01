@@ -103,4 +103,5 @@ class DanfossSolarCoordinator(DataUpdateCoordinator):
             
         except Exception as err:
             # Raising UpdateFailed signals HA that the entities are now unavailable
-            raise UpdateFailed(f"Error communicating with Danfoss Inverter: {err}") from err
+            _LOGGER.exception("Error communicating with Danfoss Inverter")
+            raise UpdateFailed(f"Error communicating with API: {err}") from err

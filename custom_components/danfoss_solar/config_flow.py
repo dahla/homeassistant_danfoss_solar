@@ -42,5 +42,5 @@ class DanfossSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            ddata_schema=self.add_suggested_values_to_schema(DATA_SCHEMA, entry.data)
+            data_schema=self.add_suggested_values_to_schema(DATA_SCHEMA, entry.data)
         )
