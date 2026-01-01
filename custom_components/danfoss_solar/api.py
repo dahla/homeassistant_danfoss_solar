@@ -41,6 +41,7 @@ class DanfossSolarAPI:
     async def get_inverter_data(self, domain, username, password):
         """Fetch data from the inverter web interface."""
         try:
+            _LOGGER.debug("Attempting to log in to Danfoss Inverter at %s", domain)
             # 1. Login Request
             login_url = f"http://{domain}/cgi-bin/handle_login.tcl"
             params = {"user": username, "pw": password, "submit": "Login", "sid": ""}
@@ -53,9 +54,8 @@ class DanfossSolarAPI:
             if not sid_match:
                 _LOGGER.error("Failed to extract SID. Check credentials or domain. Response: %s", login_html)
                 return None
-            
             sid = sid_match.group(1)
-
+            _LOGGER.debug("Login successful, obtained SID: %s", sid)
             # 3. Get Overview Data
             overview_url = f"http://{domain}/cgi-bin/overview.tcl"
             async with self._session.get(overview_url, params={"sid": sid}, headers=self.headers, timeout=10) as resp:
@@ -85,9 +85,9 @@ class DanfossSolarAPI:
             async with self._session.get(logout_url, params={"sid": sid}, headers=self.headers, timeout=10) as resp:
                 logout_html = await resp.text()
 
-
+            _LOGGER.debug("Logged out from Danfoss Inverter.")
             return data
 
         except Exception as err:
-            _LOGGER.error("Error communicating with Danfoss Inverter: %s", err)
+            _LOGGER.error("Error communicating with Danfoss Inverter: %s", repr(err))
             raise err
