@@ -11,7 +11,6 @@ _LOGGER = logging.getLogger(__name__)
 class DanfossSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow."""
     VERSION = 1
-    MINOR_VERSION = 0
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""

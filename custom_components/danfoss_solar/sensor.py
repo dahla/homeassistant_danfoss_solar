@@ -12,82 +12,56 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Keys must match the dictionary keys in api.py exactly
-POWER_ENTRY = "power"
-DAILY_PRODUCTION_ENTRY = "daily_production"
-TOTAL_PRODUCTION_ENTRY = "total_production"
-
 async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up the sensor platform."""
+    """Set up sensors from a config entry."""
+    _LOGGER.debug("Starting sensor setup for Danfoss Solar")
     
-    # Retrieve the coordinator created in __init__.py
+    # Get coordinator from hass.data (setup in __init__.py)
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    
-    # Use entry.data as the source for the base name
-    config = entry.data
 
-    sensors = [
-        DanfossSolarInverter(coordinator, entry, config, POWER_ENTRY,
-            device_class=SensorDeviceClass.POWER,
-            state_class=SensorStateClass.MEASUREMENT,
-            unit=UnitOfPower.WATT),
-        DanfossSolarInverter(coordinator, entry, config, DAILY_PRODUCTION_ENTRY,
-            device_class=SensorDeviceClass.ENERGY,
-            state_class=SensorStateClass.TOTAL_INCREASING,
-            unit=UnitOfEnergy.WATT_HOUR),
-        DanfossSolarInverter(coordinator, entry, config, TOTAL_PRODUCTION_ENTRY,
-            device_class=SensorDeviceClass.ENERGY,
-            state_class=SensorStateClass.TOTAL_INCREASING,
-            unit=UnitOfEnergy.WATT_HOUR),
+    # Map the internal API keys to pretty display names
+    # You can change the strings on the right to whatever you prefer
+    sensors_to_create = [
+        ("power", "Current power", SensorDeviceClass.POWER, SensorStateClass.MEASUREMENT, UnitOfPower.WATT),
+        ("daily_production", "Daily production", SensorDeviceClass.ENERGY, SensorStateClass.TOTAL_INCREASING, UnitOfEnergy.WATT_HOUR),
+        ("total_production", "Total production", SensorDeviceClass.ENERGY, SensorStateClass.TOTAL_INCREASING, UnitOfEnergy.WATT_HOUR),
     ]
 
-    async_add_entities(sensors)
+    entities = []
+    for key, friendly_name, device_class, state_class, unit in sensors_to_create:
+        entities.append(
+            DanfossSolarInverter(coordinator, entry, key, friendly_name, device_class, state_class, unit)
+        )
 
+    async_add_entities(entities)
 
 class DanfossSolarInverter(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, entry, config, suffix, 
-                 device_class, state_class, unit):
+    """Representation of a Danfoss Sensor."""
+
+    def __init__(self, coordinator, entry, key, friendly_name, device_class, state_class, unit):
         super().__init__(coordinator)
-        
-        self._suffix = suffix
-        # Hardcoded mapping for pretty names
-        friendly_names = {
-            "power": "Current Power",
-            "daily_production": "Production Today",
-            "total_production": "Lifetime Production"
-        }
-        _LOGGER.debug("Initialization values - Suffix: %s, Device Class: %s, State Class: %s, Unit: %s",
-                      suffix, device_class, state_class, unit)
-        base_name = entry.data.get("name", "Danfoss")
-        pretty_suffix = friendly_names.get(suffix, suffix.replace("_", " ").title())
-        
-        # This sets the name you see in the UI
-        self._attr_name = f"{base_name} {pretty_suffix}"
-        
-        # Unique ID stays internal (do not change this or you get duplicate entities)
-        self._attr_unique_id = f"{entry.entry_id}_{suffix.lower()}"
-        
+        self._key = key
         self._attr_device_class = device_class
         self._attr_state_class = state_class
         self._attr_native_unit_of_measurement = unit
+
+        # Naming Logic
+        # This will show up as e.g. "Dahls solceller Solar Power"
+        base_name = entry.data.get("name", "Danfoss")
+        self._attr_name = f"{base_name} {friendly_name}"
+        
+        # Unique ID is critical - do not change this if you want to keep history
+        self._attr_unique_id = f"{entry.entry_id}_{key}"
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=base_name,
             manufacturer="Danfoss Solar",
-            model="Solar Inverter Web Interface"
         )
 
     @property
     def native_value(self):
-        """Return the state from the coordinator data."""
+        """Return the state from coordinator data."""
         if self.coordinator.data is None:
-            _LOGGER.debug("Sensor %s is waiting for coordinator data", self.name)
             return None
-            
-        value = self.coordinator.data.get(self._suffix)
-        
-        if value is None:
-            _LOGGER.warning("Key '%s' not found in coordinator data", self._suffix)
-            
-        return value
+        return self.coordinator.data.get(self._key)
