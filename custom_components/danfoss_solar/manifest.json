@@ -1,0 +1,11 @@
+{
+  "domain": "danfoss_solar",
+  "name": "Danfoss Solar - Solar Inverter Integration",
+  "documentation": "https://github.com/dahla/homeassistant_danfoss_solar",
+  "dependencies": [],
+  "codeowners": ["@dahla"],
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "version": "1.0.5"
+}

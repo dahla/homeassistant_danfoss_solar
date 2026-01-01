@@ -1,0 +1,6 @@
+{
+  "name": "Danfoss Solar integration",
+  "content_type": "integration",
+  "domains": ["danfoss_solar"],
+  "iot_class": "local_polling"
+}
