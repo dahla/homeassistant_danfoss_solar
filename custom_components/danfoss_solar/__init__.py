@@ -24,32 +24,23 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Danfoss Solar from a config entry."""
-    
-    # 1. Initialize the API logic
-    # We use the built-in HA session for efficiency
     session = async_get_clientsession(hass)
+    
+    # This instance now lives as long as the integration is loaded
     api = DanfossSolarAPI(session)
 
-    # 2. Setup the Data Coordinator
-    # This class handles the update interval and calls your API
     coordinator = DanfossSolarCoordinator(hass, api, entry)
 
-    # 3. Trigger the first data fetch
-    # This ensures entities have data immediately when they are created.
-    # If the login fails here, the integration setup will fail and show an error.
-    await coordinator.async_config_entry_first_refresh()
+    # Use 'always_update=False' if you want to avoid writing to the DB 
+    # if the data hasn't changed (optional)
+    
+    # Trigger first fetch but don't blow up if the inverter is asleep
+    await coordinator.async_refresh()
 
-    # 4. Store the coordinator in hass.data
-    # This allows sensor.py to access the shared data
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    # 5. Setup the platforms (sensor.py)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
-    # 6. Listen for changes in options (like interval changes)
-    entry.async_on_unload(entry.add_update_listener(update_listener))
-
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

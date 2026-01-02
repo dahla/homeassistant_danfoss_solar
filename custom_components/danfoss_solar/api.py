@@ -23,6 +23,8 @@ class DanfossSolarAPI:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HomeAssistant-Danfoss/1.0"
         }
+        # Cache to prevent "holes" in data which cause spikes in the Energy Dashboard
+        self._last_data = {"power": 0, "daily_production": 0, "total_production": 0}
 
     def _parse_value(self, value_str, unit_str):
         """Convert scraped strings to float and normalize to base unit (W or Wh)."""
@@ -42,6 +44,7 @@ class DanfossSolarAPI:
         """Fetch data from the inverter web interface."""
         try:
             _LOGGER.debug("Attempting to log in to Danfoss Inverter at %s", domain)
+            
             # 1. Login Request
             login_url = f"http://{domain}/cgi-bin/handle_login.tcl"
             params = {"user": username, "pw": password, "submit": "Login", "sid": ""}
@@ -52,42 +55,50 @@ class DanfossSolarAPI:
             # 2. Extract SID
             sid_match = SID_PATTERN.search(login_html)
             if not sid_match:
-                _LOGGER.error("Failed to extract SID. Check credentials or domain. Response: %s", login_html)
-                return None
+                _LOGGER.warning("Failed to extract SID. Inverter might be offline or busy. Returning last known production values.")
+                return self._get_offline_data()
+
             sid = sid_match.group(1)
             _LOGGER.debug("Login successful, obtained SID: %s", sid)
+
             # 3. Get Overview Data
             overview_url = f"http://{domain}/cgi-bin/overview.tcl"
             async with self._session.get(overview_url, params={"sid": sid}, headers=self.headers, timeout=10) as resp:
                 overview_html = await resp.text()
 
             # 4. Extract Values
-            data = {"power": 0, "daily_production": 0, "total_production": 0}
-            
-            _LOGGER.debug("Raw HTML received (first 500 chars): %s", overview_html[:500])
-
             p_match = POWER_PATTERN.search(overview_html)
             d_match = DAILY_PATTERN.search(overview_html)
             t_match = TOTAL_PATTERN.search(overview_html)
 
-            # Debugging the matches
-            _LOGGER.debug("Matches - Power: %s, Daily: %s, Total: %s", p_match, d_match, t_match)
-        
-            if p_match: data["power"] = self._parse_value(p_match.group(1), p_match.group(2))
-            if d_match: data["daily_production"] = self._parse_value(d_match.group(1), d_match.group(2))
-            if t_match: data["total_production"] = self._parse_value(t_match.group(1), t_match.group(2))
+            # Only process if we found matches, otherwise fall back to cache
+            if d_match and t_match:
+                new_data = {
+                    "power": self._parse_value(p_match.group(1), p_match.group(2)) if p_match else 0,
+                    "daily_production": self._parse_value(d_match.group(1), d_match.group(2)),
+                    "total_production": self._parse_value(t_match.group(1), t_match.group(2))
+                }
+                # Update the cache with successful fetch
+                self._last_data = new_data
+                _LOGGER.debug("Successfully updated inverter data: %s", new_data)
+            else:
+                _LOGGER.warning("HTML parsed but production values not found. Using cached data.")
 
-            async with self._session.get(login_url, params=params, headers=self.headers, timeout=10) as resp:
-                login_html = await resp.text()
+            # 5. Logout (Clean up session)
+            try:
+                logout_url = f"http://{domain}/cgi-bin/logout.tcl"
+                await self._session.get(logout_url, params={"sid": sid}, headers=self.headers, timeout=5)
+            except Exception:
+                pass # Logout failure is non-critical
 
-            # 5. Logout Request
-            logout_url = f"http://{domain}/cgi-bin/logout.tcl"
-            async with self._session.get(logout_url, params={"sid": sid}, headers=self.headers, timeout=10) as resp:
-                logout_html = await resp.text()
+            return self._last_data
 
-            _LOGGER.debug("Logged out from Danfoss Inverter.")
-            return data
+        except (asyncio.TimeoutError, Exception) as err:
+            _LOGGER.error("Communication error with Danfoss Inverter (%s). Providing fallback data to prevent dashboard spikes.", repr(err))
+            return self._get_offline_data()
 
-        except Exception as err:
-            _LOGGER.error("Error communicating with Danfoss Inverter: %s", repr(err))
-            raise err
+    def _get_offline_data(self):
+        """Returns the last known production totals but sets current power to 0."""
+        offline_data = self._last_data.copy()
+        offline_data["power"] = 0
+        return offline_data
