@@ -9,7 +9,20 @@
           "url_domain": "Inverter IP or Domain",
           "login_username": "Web UI Username",
           "login_password": "Web UI Password",
-          "update_interval": "Update Interval (Seconds)"
+          "update_interval": "Update Interval (Seconds)",
+          "log_interval": "Interval in minutes to prevent logging errors with missing connection"
+        }
+      },
+       "reconfigure": {
+        "title": "Danfoss Solar Inverter Setup",
+        "description": "Enter the connection details for your Danfoss Solar Inverter.",
+        "data": {
+          "name": "Display Name (e.g. My Solar)",
+          "url_domain": "Inverter IP or Domain",
+          "login_username": "Web UI Username",
+          "login_password": "Web UI Password",
+          "update_interval": "Update Interval (Seconds)",
+          "log_interval": "Interval in minutes to prevent logging errors with missing connection"
         }
       }
     },

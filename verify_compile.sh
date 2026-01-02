@@ -1,1 +1,1 @@
-python -m py_compile ./custom_components/danfoss_solar/*.py && echo "All good"
+ruff check ./custom_components/danfoss_solar/*.py && echo "All good"

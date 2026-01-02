@@ -14,7 +14,8 @@ from .const import (
     CONF_DOMAIN, 
     CONF_USERNAME, 
     CONF_PASSWORD, 
-    CONF_INTERVAL
+    CONF_INTERVAL,
+    CONF_LOG_INTERVAL
 )
 
 _LOGGER = logging.getLogger(__package__)
@@ -27,7 +28,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     session = async_get_clientsession(hass)
     
     # This instance now lives as long as the integration is loaded
-    api = DanfossSolarAPI(session)
+    
+    api = DanfossSolarAPI(session, entry.data.get(CONF_LOG_INTERVAL, 60))
 
     coordinator = DanfossSolarCoordinator(hass, api, entry)
 
@@ -84,8 +86,7 @@ class DanfossSolarCoordinator(DataUpdateCoordinator):
             data = await self.api.get_inverter_data(
                 domain=self.entry.data[CONF_DOMAIN],
                 username=self.entry.data[CONF_USERNAME],
-                password=self.entry.data[CONF_PASSWORD]
-            )
+                password=self.entry.data[CONF_PASSWORD]            )
             
             if not data:
                 raise UpdateFailed("API returned empty data or login failed")

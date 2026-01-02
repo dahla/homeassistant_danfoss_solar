@@ -1,10 +1,9 @@
 from homeassistant import config_entries
 from typing import Any 
-from homeassistant.core import callback
 import voluptuous as vol
 import logging
 
-from .const import DOMAIN, CONF_DOMAIN, CONF_USERNAME, CONF_PASSWORD, CONF_INTERVAL
+from .const import DOMAIN, CONF_DOMAIN, CONF_USERNAME, CONF_PASSWORD, CONF_INTERVAL, CONF_LOG_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -14,6 +13,7 @@ DATA_SCHEMA = vol.Schema({
     vol.Required(CONF_USERNAME): str,
     vol.Required(CONF_PASSWORD): str,
     vol.Required(CONF_INTERVAL, default=60): int,
+    vol.Required(CONF_LOG_INTERVAL, default=15): int
 })
 
 class DanfossSolarConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
